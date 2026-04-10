@@ -1,0 +1,143 @@
+{
+  "project": "网络信息聚合与时间线展示系统",
+  "context": "扩展现有Claude Agent项目，添加从网络公开信源拉取信息、AI处理、时间线展示功能",
+  "userRequirements": {
+    "aiProcessing": "使用现有Claude服务",
+    "feedArchitecture": "插件式可扩展架构",
+    "timelineDisplay": "交互式时间轴"
+  },
+  "dataModels": {
+    "Category": "信息分类模型",
+    "FeedSource": "信源配置模型",
+    "FeedItem": "原始信息项",
+    "ProcessedArticle": "处理后的文章",
+    "TimelineEvent": "时间线事件"
+  },
+  "services": [
+    "FeedFetcherService - 插件式信源获取",
+    "ArticleProcessorService - AI文章处理",
+    "TimelineService - 时间线生成",
+    "CategoryService - 分类管理"
+  ],
+  "apiEndpoints": [
+    "GET /api/news/timeline",
+    "GET /api/news/feed-sources",
+    "POST /api/news/fetch",
+    "GET /api/news/categories",
+    "GET /api/news/search",
+    "PUT /api/news/{id}/process"
+  ],
+  "frontend": {
+    "technology": "Vis.js Timeline",
+    "features": [
+      "时间轴缩放",
+      "事件点击详情",
+      "分类过滤",
+      "关键词搜索",
+      "时间范围选择"
+    ]
+  },
+  "implementationPhases": [
+    {
+      "phase": 1,
+      "name": "基础架构",
+      "duration": "2天",
+      "tasks": [
+        "创建数据模型和数据库迁移",
+        "扩展配置系统",
+        "创建基础服务接口"
+      ]
+    },
+    {
+      "phase": 2,
+      "name": "信源获取",
+      "duration": "3天",
+      "tasks": [
+        "实现插件式架构",
+        "完成RSS插件",
+        "实现基础API插件框架",
+        "添加网页抓取基础"
+      ]
+    },
+    {
+      "phase": 3,
+      "name": "AI处理集成",
+      "duration": "2天",
+      "tasks": [
+        "扩展现有Claude服务",
+        "实现文章处理流程",
+        "创建处理任务队列"
+      ]
+    },
+    {
+      "phase": 4,
+      "name": "时间线后端",
+      "duration": "2天",
+      "tasks": [
+        "实现时间线服务",
+        "创建API端点",
+        "添加搜索和过滤功能"
+      ]
+    },
+    {
+      "phase": 5,
+      "name": "交互式前端",
+      "duration": "3天",
+      "tasks": [
+        "集成Vis.js时间轴",
+        "实现响应式界面",
+        "添加交互功能",
+        "优化用户体验"
+      ]
+    },
+    {
+      "phase": 6,
+      "name": "系统集成",
+      "duration": "2天",
+      "tasks": [
+        "定时任务调度",
+        "错误处理和日志",
+        "性能优化",
+        "安全性检查"
+      ]
+    },
+    {
+      "phase": 7,
+      "name": "测试和部署",
+      "duration": "2天",
+      "tasks": [
+        "单元测试和集成测试",
+        "部署配置",
+        "文档编写"
+      ]
+    }
+  ],
+  "keyFiles": {
+    "create": [
+      "/e/deepseek/claude_agent/app/models/news.py",
+      "/e/deepseek/claude_agent/app/schemas/news.py",
+      "/e/deepseek/claude_agent/app/services/feed_fetcher.py",
+      "/e/deepseek/claude_agent/app/services/article_processor.py",
+      "/e/deepseek/claude_agent/app/services/timeline_service.py",
+      "/e/deepseek/claude_agent/app/services/category_service.py",
+      "/e/deepseek/claude_agent/app/api/news.py",
+      "/e/deepseek/claude_agent/app/api/categories.py",
+      "/e/deepseek/claude_agent/app/templates/timeline.html",
+      "/e/deepseek/claude_agent/app/static/js/timeline.js",
+      "/e/deepseek/claude_agent/init_news.py"
+    ],
+    "modify": [
+      "/e/deepseek/claude_agent/app/main.py",
+      "/e/deepseek/claude_agent/app/core/config.py",
+      "/e/deepseek/claude_agent/app/templates/index.html",
+      "/e/deepseek/claude_agent/requirements.txt"
+    ]
+  },
+  "dependencies": [
+    "feedparser>=6.0.0",
+    "requests>=2.31.0",
+    "beautifulsoup4>=4.12.0",
+    "schedule>=1.2.0",
+    "vis-network>=9.1.0"
+  ]
+}

@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>构建高效代理 - Anthropic 工程博客中文翻译</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+
+        .container {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            margin-top: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #eaeaea;
+        }
+
+        h1 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 15px;
+        }
+
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 1.2em;
+            margin-bottom: 20px;
+        }
+
+        .meta {
+            color: #95a5a6;
+            font-size: 0.9em;
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            color: #3498db;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        h3 {
+            color: #2c3e50;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+
+        p {
+            margin-bottom: 20px;
+            text-align: justify;
+        }
+
+        ul, ol {
+            margin-bottom: 20px;
+            padding-left: 30px;
+        }
+
+        li {
+            margin-bottom: 10px;
+        }
+
+        .highlight {
+            background-color: #f8f9fa;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 5px 5px 0;
+        }
+
+        .note {
+            background-color: #fffde7;
+            border-left: 4px solid #f1c40f;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 5px 5px 0;
+        }
+
+        .definition {
+            background-color: #e8f4fc;
+            border: 1px solid #3498db;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+
+        .definition h4 {
+            color: #2980b9;
+            margin-bottom: 10px;
+        }
+
+        .workflow {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 20px;
+            margin: 25px 0;
+        }
+
+        .workflow h4 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+
+        .workflow h4:before {
+            content: "🔧";
+            margin-right: 10px;
+        }
+
+        .appendix {
+            background-color: #f5f5f5;
+            border-left: 4px solid #9b59b6;
+            padding: 20px;
+            margin: 30px 0;
+            border-radius: 0 5px 5px 0;
+        }
+
+        footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 2px solid #eaeaea;
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+
+        .toc {
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .toc h3 {
+            margin-top: 0;
+            color: #3498db;
+        }
+
+        .toc ul {
+            columns: 2;
+            column-gap: 40px;
+        }
+
+        .toc li {
+            margin-bottom: 8px;
+            break-inside: avoid;
+        }
+
+        .toc a {
+            color: #3498db;
+            text-decoration: none;
+        }
+
+        .toc a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+
+            .toc ul {
+                columns: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>构建高效代理</h1>
+            <div class="subtitle">Anthropic 工程博客文章中文翻译</div>
+            <div class="meta">
+                原文标题: Building Effective Agents<br>
+                作者: Erik Schluntz 和 Barry Zhang (Anthropic 工程团队)<br>
+                原文地址: <a href="https://www.anthropic.com/engineering/building-effective-agents" target="_blank">https://www.anthropic.com/engineering/building-effective-agents</a><br>
+                翻译日期: 2026年3月31日
+            </div>
+        </header>
+
+        <section class="toc">
+            <h3>📋 目录</h3>
+            <ul>
+                <li><a href="#core-thesis">核心论点</a></li>
+                <li><a href="#key-concepts">关键概念区分</a></li>
+                <li><a href="#when-to-use">何时（以及何时不）使用代理</a></li>
+                <li><a href="#building-blocks">构建模块：增强的LLM</a></li>
+                <li><a href="#workflow-patterns">工作流模式</a></li>
+                <li><a href="#agents">代理（自主代理）</a></li>
+                <li><a href="#core-principles">核心原则</a></li>
+                <li><a href="#appendix1">附录1：代理实践</a></li>
+                <li><a href="#appendix2">附录2：工具的提示工程</a></li>
+                <li><a href="#summary">总结</a></li>
+            </ul>
+        </section>
+
+        <section id="core-thesis">
+            <h2>🎯 核心论点</h2>
+            <p>在过去一年中，我们与数十个在不同行业构建大语言模型（LLM）代理的团队合作。一致地发现，最成功的实现并非使用复杂框架或专用库，而是基于简单、可组合的模式构建。</p>
+            <p>在这篇文章中，我们分享从客户合作和自身代理构建中学到的经验，为开发者提供构建高效代理的实用建议。</p>
+
+            <div class="highlight">
+                <p><strong>关键洞察：</strong> 最成功的代理实现基于简单、可组合的模式，而不是复杂框架。</p>
+            </div>
+        </section>
+
+        <section id="key-concepts">
+            <h2>🔑 关键概念区分</h2>
+
+            <div class="definition">
+                <h4>代理（Agents） vs 工作流（Workflows）</h4>
+                <p><strong>工作流：</strong> 通过预定义代码路径编排LLM和工具的系统。工作流具有可预测的执行路径，适用于明确定义的任务。</p>
+                <p><strong>代理：</strong> LLM动态指导自身过程和工具使用的系统，保持对任务完成方式的控制。代理更具灵活性和自主性。</p>
+                <p>在Anthropic，我们将所有这些变体归类为<strong>代理系统</strong>，但在架构上区分工作流和代理。</p>
+            </div>
+
+            <div class="note">
+                <p><strong>注意：</strong> 本文中，"代理系统"是总称，包括工作流和代理两种架构模式。</p>
+            </div>
+        </section>
+
+        <section id="when-to-use">
+            <h2>⏰ 何时（以及何时不）使用代理</h2>
+
+            <h3>简单解决方案优先</h3>
+            <p>在构建LLM应用时，我们建议首先寻找最简单的解决方案，仅在需要时增加复杂性。这可能意味着根本不构建代理系统。</p>
+
+            <h3>权衡考虑</h3>
+            <p>代理系统通常以延迟和成本换取更好的任务性能，您应该考虑这种权衡何时有意义：</p>
+            <ul>
+                <li><strong>工作流的优势：</strong> 为明确定义的任务提供可预测性和一致性</li>
+                <li><strong>代理的优势：</strong> 当需要灵活性和模型驱动的决策时</li>
+                <li><strong>简单方案：</strong> 对于许多应用，使用检索和上下文示例优化单个LLM调用通常就足够了</li>
+            </ul>
+
+            <h3>框架使用建议</h3>
+            <p>有许多框架使代理系统更容易实现，包括：</p>
+            <ul>
+                <li>Claude Agent SDK</li>
+                <li>AWS的Strands Agents SDK</li>
+                <li>Rivet（拖放GUI LLM工作流构建器）</li>
+                <li>Vellum（另一个用于构建和测试复杂工作流的GUI工具）</li>
+            </ul>
+
+            <div class="highlight">
+                <p><strong>建议：</strong> 开发者应从直接使用LLM API开始：许多模式可以用几行代码实现。如果使用框架，请确保理解底层代码。</p>
+            </div>
+        </section>
+
+        <section id="building-blocks">
+            <h2>🧱 构建模块：增强的LLM</h2>
+
+            <p>代理系统的基本构建块是增强的LLM，具有以下能力：</p>
+            <ul>
+                <li><strong>检索（Retrieval）：</strong> 获取外部信息</li>
+                <li><strong>工具使用（Tools）：</strong> 调用外部功能</li>
+                <li><strong>记忆（Memory）：</strong> 保留和利用历史信息</li>
+            </ul>
+
+            <p>我们当前的模型可以主动使用这些能力：生成自己的搜索查询、选择适当的工具、确定保留哪些信息。</p>
+
+            <div class="note">
+                <p><strong>实现重点：</strong> 我们建议关注两个关键方面：</p>
+                <ol>
+                    <li>为特定用例定制这些能力</li>
+                    <li>确保它们为LLM提供简单、文档完善的接口</li>
+                </ol>
+            </div>
+
+            <p>实现这些增强的一种方法是通过最近发布的<strong>模型上下文协议（Model Context Protocol）</strong>，它允许开发者通过简单的客户端实现与不断增长的第三方工具生态系统集成。</p>
+        </section>
+
+        <section id="workflow-patterns">
+            <h2>🔄 工作流模式</h2>
+
+            <p>以下是我们在生产中看到的代理系统常见模式：</p>
+
+            <div class="workflow">
+                <h4>1. 提示链（Prompt Chaining）</h4>
+                <p>将任务分解为一系列步骤，每个LLM调用处理前一个步骤的输出。可以在任何中间步骤添加程序化检查（如下图中的"gate"）以确保过程正常进行。</p>
+                <p><strong>适用场景：</strong> 任务可以轻松、清晰地分解为固定子任务的情况。</p>
+                <p><strong>示例：</strong> 生成营销文案，然后将其翻译成不同语言；编写文档大纲，检查大纲是否符合某些标准，然后根据大纲编写文档。</p>
+            </div>
+
+            <div class="workflow">
+                <h4>2. 路由（Routing）</h4>
+                <p>对输入进行分类并将其引导到专门的后续任务。允许关注点分离，构建更专门的提示。</p>
+                <p><strong>适用场景：</strong> 复杂任务，存在更好单独处理的不同类别，且分类可以由LLM或传统分类模型准确处理。</p>
+                <p><strong>示例：</strong> 将不同类型的客户服务查询（一般问题、退款请求、技术支持）引导到不同的下游流程、提示和工具；将简单/常见问题路由到成本效益更高的模型（如Claude Haiku 4.5），将困难/不寻常问题路由到更强大的模型（如Claude Sonnet 4.5）。</p>
+            </div>
+
+            <div class="workflow">
+                <h4>3. 并行化（Parallelization）</h4>
+                <p>LLM有时可以同时处理任务，程序化聚合输出。有两种关键变体：</p>
+                <ul>
+                    <li><strong>分段（Sectioning）：</strong> 将任务分解为独立并行运行的子任务</li>
+                    <li><strong>投票（Voting）：</strong> 多次运行相同任务以获得多样化输出</li>
+                </ul>
+                <p><strong>适用场景：</strong> 需要并行化以提高速度，或需要多个视角/尝试以获得更高置信度结果。</p>
+                <p><strong>示例：</strong> 实施防护栏，一个模型实例处理用户查询，另一个筛选不适当内容；自动化评估LLM性能，每个LLM调用评估模型在给定提示上的不同方面。</p>
+            </div>
+
+            <div class="workflow">
+                <h4>4. 编排器-工作者（Orchestrator-workers）</h4>
+                <p>中央LLM动态分解任务，将其委托给工作者LLM，并综合它们的结果。</p>
+                <p><strong>适用场景：</strong> 无法预测所需子任务的复杂任务（如编码任务）。</p>
+                <p><strong>示例：</strong> 每次对多个文件进行复杂更改的编码产品；涉及从多个来源收集和分析信息以获取可能相关信息。</p>
+            </div>
+
+            <div class="workflow">
+                <h4>5. 评估器-优化器（Evaluator-optimizer）</h4>
+                <p>一个LLM调用生成响应，另一个在循环中提供评估和反馈。</p>
+                <p><strong>适用场景：</strong> 有明确评估标准，且迭代改进提供可衡量价值的情况。</p>
+                <p><strong>示例：</strong> 文学翻译，翻译LLM可能最初无法捕捉细微差别，但评估器LLM可以提供有用批评；需要多轮搜索和分析以收集全面信息的复杂搜索任务。</p>
+            </div>
+        </section>
+
+        <section id="agents">
+            <h2>🤖 代理（自主代理）</h2>
+
+            <p>随着LLM在关键能力上的成熟，代理正在生产中崭露头角：理解复杂输入、参与推理和规划、可靠使用工具以及从错误中恢复。</p>
+
+            <h3>代理特征</h3>
+            <ul>
+                <li>从人类用户接收命令或进行交互讨论</li>
+                <li>任务明确后，独立计划和操作</li>
+                <li>在执行过程中从环境获取"基本事实"（如工具调用结果或代码执行）以评估进度</li>
+                <li>可以在检查点或遇到阻碍时暂停等待人类反馈</li>
+                <li>通常任务在完成时终止，但也包括停止条件（如最大迭代次数）以保持控制</li>
+            </ul>
+
+            <h3>何时使用代理</h3>
+            <p>代理可用于开放式问题，其中难以或无法预测所需步骤数，且无法硬编码固定路径。LLM可能运行多个回合，您必须对其决策有一定程度的信任。</p>
+
+            <div class="highlight">
+                <p><strong>注意：</strong> 代理的自主性意味着更高的成本和潜在的错误累积。我们建议在沙盒环境中进行广泛测试，并设置适当的防护栏。</p>
+            </div>
+
+            <h3>代理示例</h3>
+            <ul>
+                <li><strong>编码代理：</strong> 解决SWE-bench任务，根据任务描述编辑多个文件</li>
+                <li><strong>计算机使用：</strong> Claude使用计算机完成任务</li>
+            </ul>
+        </section>
+
+        <section id="core-principles">
+            <h2>🎯 核心原则</h2>
+
+            <p>在实现代理时，我们尝试遵循三个核心原则：</p>
+
+            <div class="definition">
+                <h4>1. 保持简单性</h4>
+                <p>保持代理设计的简单性。复杂性只应在明确改进结果时添加。</p>
+            </div>
+
+            <div class="definition">
+                <h4>2. 优先透明度</h4>
+                <p>通过明确显示代理的规划步骤来优先考虑透明度。这有助于调试和建立信任。</p>
+            </div>
+
+            <div class="definition">
+                <h4>3. 精心设计ACI</h4>
+                <p>通过彻底的工具文档和测试精心设计代理-计算机接口（ACI）。工具是代理与外界交互的关键。</p>
+            </div>
+
+            <p>框架可以帮助快速入门，但在转向生产时不要犹豫减少抽象层并使用基本组件构建。</p>
+        </section>
+
+        <section class="appendix" id="appendix1">
+            <h2>📋 附录1：代理实践</h2>
+
+            <p>我们的客户工作揭示了两个特别有前景的AI代理应用领域，展示了上述模式的实用价值：</p>
+
+            <h3>A. 客户支持</h3>
+            <p>客户支持结合熟悉的聊天机器人界面和通过工具集成的增强能力。这非常适合更开放的代理，因为：</p>
+            <ul>
+                <li>支持交互自然遵循对话流程，同时需要访问外部信息和操作</li>
+                <li>可以集成工具来获取客户数据、订单历史和知识库文章</li>
+                <li>可以程序化处理退款或更新工单等操作</li>
+                <li>可以通过用户定义的解决方案清晰衡量成功</li>
+            </ul>
+
+            <h3>B. 编码代理</h3>
+            <p>软件开发领域已显示出LLM功能的显著潜力，能力从代码补全发展到自主问题解决。代理特别有效，因为：</p>
+            <ul>
+                <li>代码解决方案可通过自动化测试验证</li>
+                <li>代理可以使用测试结果作为反馈进行迭代</li>
+                <li>问题空间定义明确且结构化</li>
+                <li>输出质量可以客观衡量</li>
+            </ul>
+        </section>
+
+        <section class="appendix" id="appendix2">
+            <h2>📋 附录2：工具的提示工程</h2>
+
+            <p>无论构建哪种代理系统，工具都可能是代理的重要组成部分。工具使Claude能够通过在我们的API中指定其确切结构和定义来与外部服务和API交互。</p>
+
+            <h3>工具设计建议</h3>
+
+            <div class="note">
+                <p><strong>关键原则：</strong> 投入与人类-计算机界面（HCI）相同的精力创建良好的代理-计算机界面（ACI）。</p>
+            </div>
+
+            <p>我们的工具格式决策建议：</p>
+            <ol>
+                <li><strong>给模型足够的令牌来"思考"：</strong> 避免它陷入困境</li>
+                <li><strong>保持格式自然：</strong> 接近模型在互联网文本中自然看到的内容</li>
+                <li><strong>避免格式化"开销"：</strong> 如必须准确计算数千行代码，或对编写的任何代码进行字符串转义</li>
+            </ol>
+
+            <h3>最佳实践</h3>
+            <ul>
+                <li><strong>站在模型的角度：</strong> 基于描述和参数，使用此工具是否明显？</li>
+                <li><strong>包含示例：</strong> 良好的工具定义通常包括使用示例、边缘情况、输入格式要求和与其他工具的清晰边界</li>
+                <li><strong>测试工具使用：</strong> 在工作台中运行许多示例输入，查看模型犯的错误并进行迭代</li>
+                <li><strong>防错设计：</strong> 更改参数使其更难出错</li>
+            </ul>
+
+            <div class="highlight">
+                <p><strong>经验分享：</strong> 在构建SWE-bench代理时，我们实际上花了更多时间优化工具而不是整体提示。</p>
+            </div>
+        </section>
+
+        <section id="summary">
+            <h2>📝 总结</h2>
+
+            <p>LLM领域的成功不在于构建最复杂的系统，而在于为需求构建正确的系统。</p>
+
+            <div class="highlight">
+                <p><strong>实施路径：</strong></p>
+                <ol>
+                    <li><strong>从简单提示开始</strong></li>
+                    <li><strong>通过全面评估进行优化</strong></li>
+                    <li><strong>仅当更简单的解决方案不足时才添加多步骤代理系统</strong></li>
+                </ol>
+            </div>
+
+            <p>遵循这些原则，您可以创建不仅强大而且可靠、可维护且受用户信任的代理。</p>
+
+            <div class="note">
+                <p><strong>致谢：</strong> 本文由Erik Schluntz和Barry Zhang撰写。这项工作借鉴了我们在Anthropic构建代理的经验以及客户分享的宝贵见解，我们对此深表感谢。</p>
+            </div>
+        </section>
+
+        <footer>
+            <p>© 2026 Anthropic 工程博客中文翻译</p>
+            <p>本翻译基于原文 <a href="https://www.anthropic.com/engineering/building-effective-agents" target="_blank">Building Effective Agents</a>，仅供学习参考。</p>
+            <p>翻译生成日期：2026年3月31日</p>
+        </footer>
+    </div>
+
+    <script>
+        // 平滑滚动到锚点
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href');
+                if (targetId === '#') return;
+
+                const targetElement = document.querySelector(targetId);
+                if (targetElement) {
+                    window.scrollTo({
+                        top: targetElement.offsetTop - 20,
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+
+        // 高亮当前阅读部分
+        const sections = document.querySelectorAll('section[id]');
+        const navLinks = document.querySelectorAll('.toc a');
+
+        function highlightCurrentSection() {
+            let currentSection = '';
+            const scrollPosition = window.scrollY + 100;
+
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.clientHeight;
+
+                if (scrollPosition >= sectionTop && scrollPosition < sectionTop + sectionHeight) {
+                    currentSection = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === `#${currentSection}`) {
+                    link.classList.add('active');
+                }
+            });
+        }
+
+        // 添加活动状态样式
+        const style = document.createElement('style');
+        style.textContent = '.toc a.active { font-weight: bold; color: #2980b9; background-color: #e8f4fc; padding: 2px 8px; border-radius: 3px; }';
+        document.head.appendChild(style);
+
+        window.addEventListener('scroll', highlightCurrentSection);
+        highlightCurrentSection(); // 初始调用
+    </script>
+</body>
+</html>

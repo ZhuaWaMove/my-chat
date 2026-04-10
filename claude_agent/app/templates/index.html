@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Agent</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Markdown and code highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+    <style>
+        :root {
+            --primary-color: #10a37f;
+            --secondary-color: #343541;
+            --light-bg: #f7f7f8;
+            --border-color: #e5e5e5;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background-color: var(--light-bg);
+        }
+
+        .sidebar {
+            background-color: white;
+            border-right: 1px solid var(--border-color);
+            height: 100vh;
+            position: fixed;
+            overflow-y: auto;
+        }
+
+        .chat-container {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            min-height: calc(100vh - 200px);
+            margin-bottom: 20px;
+            padding-bottom: 120px;
+            overflow: visible;
+        }
+
+        .message {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .user-message {
+            background-color: white;
+        }
+
+        .assistant-message {
+            background-color: #f7f7f8;
+        }
+
+        .message-header {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: var(--primary-color);
+        }
+
+        .message-content {
+            word-wrap: break-word;
+            overflow-wrap: anywhere;
+            word-break: break-all;
+            line-height: 1.6;
+            max-width: 100%;
+            display: block;
+            white-space: normal;
+            hyphens: auto;
+        }
+
+        .input-area {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background-color: white;
+            padding: 20px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .input-area .container {
+            max-width: 800px;
+            width: 100%;
+            padding: 0;
+        }
+
+        .input-area .input-group {
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .input-area .form-control {
+            border: 1px solid var(--border-color);
+            border-right: none;
+            padding: 12px 15px;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+        .input-area .form-control:focus {
+            box-shadow: none;
+            border-color: var(--primary-color);
+        }
+
+        .input-area .btn-primary {
+            border-radius: 0 8px 8px 0;
+            padding: 0 20px;
+            font-size: 18px;
+        }
+
+        .input-area .text-muted {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 0.85rem;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .input-area .container {
+                max-width: 100%;
+                padding: 0 10px;
+            }
+
+            .input-area {
+                padding: 15px 10px;
+            }
+
+            .input-area .form-control {
+                padding: 10px 12px;
+                font-size: 14px;
+            }
+
+            .input-area .btn-primary {
+                padding: 0 15px;
+                font-size: 16px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .input-area {
+                padding: 10px 5px;
+            }
+
+            .input-area .form-control {
+                padding: 8px 10px;
+            }
+
+            .input-area .btn-primary {
+                padding: 0 12px;
+                min-width: 50px;
+            }
+
+            .input-area .text-muted {
+                font-size: 0.75rem;
+            }
+        }
+
+        .session-item {
+            padding: 10px 15px;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .session-item:hover {
+            background-color: var(--light-bg);
+        }
+
+        .session-item.active {
+            background-color: var(--light-bg);
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .session-title {
+            font-weight: bold;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .session-date {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .brand {
+            color: var(--primary-color);
+            font-weight: bold;
+            font-size: 1.2rem;
+            padding: 20px 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .btn-primary:hover {
+            background-color: #0d8c6d;
+            border-color: #0d8c6d;
+        }
+
+        .spinner-border {
+            color: var(--primary-color);
+        }
+
+        .typing-indicator {
+            display: inline-block;
+            padding: 5px 10px;
+            background-color: var(--light-bg);
+            border-radius: 15px;
+            font-style: italic;
+            color: #666;
+        }
+
+        /* Markdown styling */
+        .message-content h1,
+        .message-content h2,
+        .message-content h3,
+        .message-content h4 {
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            font-weight: bold;
+            line-height: 1.2;
+        }
+
+        .message-content h1 { font-size: 1.6em; }
+        .message-content h2 { font-size: 1.4em; }
+        .message-content h3 { font-size: 1.2em; }
+
+        .message-content p {
+            margin-bottom: 1em;
+            line-height: 1.6;
+        }
+
+        .message-content ul,
+        .message-content ol {
+            margin-bottom: 1em;
+            padding-left: 2em;
+        }
+
+        .message-content li {
+            margin-bottom: 0.5em;
+        }
+
+        .message-content blockquote {
+            border-left: 4px solid var(--primary-color);
+            margin: 1em 0;
+            padding-left: 1em;
+            color: #666;
+            font-style: italic;
+        }
+
+        .message-content code {
+            background-color: rgba(0, 0, 0, 0.05);
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9em;
+        }
+
+        .message-content pre {
+            background-color: var(--light-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 1em;
+            margin: 1em 0;
+            max-width: 100%;
+            overflow-x: auto;
+            overflow-y: visible;
+            white-space: pre;
+            word-wrap: normal;
+        }
+
+        .message-content pre code {
+            background-color: transparent;
+            padding: 0;
+            border-radius: 0;
+            font-size: 0.9em;
+            line-height: 1.4;
+            white-space: pre;
+            word-wrap: normal;
+        }
+
+        .message-content table {
+            border-collapse: collapse;
+            margin: 1em 0;
+            width: 100%;
+        }
+
+        .message-content th,
+        .message-content td {
+            border: 1px solid var(--border-color);
+            padding: 0.5em 1em;
+            text-align: left;
+        }
+
+        .message-content th {
+            background-color: var(--light-bg);
+            font-weight: bold;
+        }
+
+        .message-content hr {
+            border: none;
+            border-top: 1px solid var(--border-color);
+            margin: 2em 0;
+        }
+
+        .message-content img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+        }
+
+        .message-content a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        .message-content a:hover {
+            text-decoration: underline;
+        }
+
+
+
+        /* Improve inline code display */
+        .message-content code:not(pre code) {
+            white-space: normal;
+            word-break: break-all;
+            display: inline-block;
+            max-width: 100%;
+        }
+
+        /* Ensure all content is fully visible */
+        .message-content * {
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+
+
+        /* Ensure tables fit container without internal scroll */
+        .message-content table {
+            display: table;
+            width: 100%;
+            max-width: 100%;
+            table-layout: auto;
+        }
+
+        /* Ensure table cells wrap text */
+        .message-content th,
+        .message-content td {
+            word-break: break-word;
+            overflow-wrap: break-word;
+        }
+
+        /* Better handling for lists */
+        .message-content ul,
+        .message-content ol {
+            overflow-wrap: break-word;
+        }
+
+        /* Ensure images don't exceed container */
+        .message-content img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        /* Long URLs and text break properly */
+        .message-content a {
+            word-break: break-all;
+        }
+
+        /* Stronger text display guarantees to prevent truncation */
+        .message-content * {
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* Ensure no text truncation anywhere in message content, but preserve code formatting */
+        .message-content,
+        .message-content *:not(pre):not(code):not(.hljs) {
+            overflow: visible !important;
+            text-overflow: clip !important;
+            white-space: normal !important;
+        }
+
+        /* Special handling for lists to prevent truncation */
+        .message-content li {
+            display: flow-root;
+            overflow: visible;
+            word-break: break-all;
+        }
+
+        /* Ensure list markers and content stay together */
+        .message-content ol,
+        .message-content ul {
+            overflow: visible;
+        }
+
+        /* Override any potential width constraints */
+        .message {
+            min-width: 0;
+            width: auto;
+        }
+
+        /* Force text wrapping for all elements except code blocks */
+        .message-content :not(pre):not(code):not(.hljs) {
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
+
+        /* Ensure message content can expand to full width */
+        .message-content {
+            width: 100%;
+            max-width: none;
+        }
+
+        /* Override Bootstrap column constraints for chat messages */
+        .chat-container .message {
+            max-width: none;
+            width: 100%;
+        }
+
+        /* Prevent any flex/grid constraints from limiting text */
+        .chat-container {
+            display: block;
+        }
+
+        /* Final guarantee: no text should ever be truncated */
+        .message-content,
+        .message-content * {
+            min-width: 0;
+            flex-shrink: 1;
+        }
+
+        /* Message action buttons */
+        .message-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border-color);
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .message:hover .message-actions {
+            opacity: 1;
+        }
+
+        .message-action-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background-color: white;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 0.85rem;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .message-action-btn:hover {
+            background-color: var(--light-bg);
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .message-action-btn.active {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
+        }
+
+        .message-action-btn i {
+            font-size: 0.9rem;
+        }
+
+        /* Responsive adjustments for buttons */
+        @media (max-width: 768px) {
+            .message-actions {
+                gap: 6px;
+            }
+
+            .message-action-btn {
+                padding: 5px 10px;
+                font-size: 0.8rem;
+            }
+
+            .message-action-btn span {
+                display: none;
+            }
+
+            .message-action-btn i {
+                font-size: 0.85rem;
+            }
+        }
+
+        /* Responsive bottom padding adjustments for chat container */
+        @media (max-width: 992px) {
+            .chat-container {
+                min-height: calc(100vh - 220px);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .chat-container {
+                min-height: calc(100vh - 240px);
+            }
+        }
+
+        @media (max-width: 576px) {
+            .chat-container {
+                min-height: calc(100vh - 260px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 sidebar">
+                <div class="brand">
+                    <i class="fas fa-robot"></i> Claude Agent
+                </div>
+
+                <div class="p-3">
+                    <button id="newSessionBtn" class="btn btn-primary w-100 mb-3">
+                        <i class="fas fa-plus"></i> New Chat
+                    </button>
+
+                    <div class="mb-4">
+                        <h6 class="text-muted mb-2">News & Timeline</h6>
+                        <a href="/news/timeline" class="btn btn-outline-secondary w-100 mb-2">
+                            <i class="fas fa-timeline me-2"></i> News Timeline
+                        </a>
+                        <a href="/news/feed-sources" class="btn btn-outline-secondary w-100 mb-2">
+                            <i class="fas fa-rss me-2"></i> Feed Sources
+                        </a>
+                        <a href="/news/categories" class="btn btn-outline-secondary w-100">
+                            <i class="fas fa-tags me-2"></i> Categories
+                        </a>
+                    </div>
+
+                    <h6 class="text-muted mb-2">Recent Chats</h6>
+                    <div id="sessionsList">
+                        <!-- Sessions will be loaded here -->
+                        <div class="text-center text-muted py-3">
+                            <i class="fas fa-spinner fa-spin"></i> Loading...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Chat Area -->
+            <div class="col-md-9 col-lg-10 offset-md-3 offset-lg-2 p-0">
+                <!-- Chat Header -->
+                <div class="p-3 border-bottom bg-white">
+                    <h5 id="currentSessionTitle">New Chat</h5>
+                    <small class="text-muted" id="currentSessionDate"></small>
+                </div>
+
+                <!-- Chat Messages -->
+                <div class="chat-container m-3 p-0" id="chatMessages">
+                    <!-- Messages will be displayed here -->
+                    <div class="text-center text-muted py-5">
+                        <i class="fas fa-comment-alt fa-3x mb-3"></i>
+                        <p>Start a new conversation or select an existing one</p>
+                    </div>
+                </div>
+
+                <!-- Input Area -->
+                <div class="input-area">
+                    <div class="container">
+                        <form id="chatForm">
+                            <div class="input-group">
+                                <textarea
+                                    id="messageInput"
+                                    class="form-control"
+                                    placeholder="Type your message here..."
+                                    rows="1"
+                                    style="resize: none;"
+                                ></textarea>
+                                <button class="btn btn-primary" type="submit">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted mt-2 d-block">
+                                Press Shift+Enter for new line, Enter to send
+                            </small>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Markdown and code highlighting libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script>
+        // Configure marked.js for markdown rendering
+        marked.setOptions({
+            breaks: true,
+            gfm: true,
+            highlight: function(code, lang) {
+                const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                return hljs.highlight(code, { language }).value;
+            }
+        });
+
+        let currentSessionId = null;
+        let isProcessing = false;
+        let currentStreamingMessage = null;
+        let streamingContent = '';
+
+        // DOM Elements
+        const sessionsList = document.getElementById('sessionsList');
+        const chatMessages = document.getElementById('chatMessages');
+        const chatForm = document.getElementById('chatForm');
+        const messageInput = document.getElementById('messageInput');
+        const newSessionBtn = document.getElementById('newSessionBtn');
+        const currentSessionTitle = document.getElementById('currentSessionTitle');
+        const currentSessionDate = document.getElementById('currentSessionDate');
+
+        // Auto-resize textarea
+        messageInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+        });
+
+        // Handle Shift+Enter vs Enter
+        messageInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (!isProcessing) {
+                    chatForm.dispatchEvent(new Event('submit'));
+                }
+            }
+        });
+
+        // Load sessions on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize highlight.js
+            hljs.highlightAll();
+            loadSessions();
+        });
+
+        // New session button
+        newSessionBtn.addEventListener('click', function() {
+            createNewSession();
+        });
+
+        // Send message
+        chatForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const message = messageInput.value.trim();
+            if (!message || isProcessing) return;
+
+            // Add user message to UI
+            addMessageToUI('user', message);
+            messageInput.value = '';
+            messageInput.style.height = 'auto';
+
+            // Show typing indicator
+            showTypingIndicator();
+
+            isProcessing = true;
+
+            try {
+                // Start streaming message
+                startStreamingMessage();
+
+                const response = await fetch('/api/chat/stream', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        session_id: currentSessionId
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let sessionIdFromStream = null;
+
+                // Process streaming response
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.substring(6);
+                            if (data.startsWith('{') && data.includes('session_id')) {
+                                // Handle session info if needed
+                                try {
+                                    const sessionData = JSON.parse(data);
+                                    if (sessionData.session_id && !currentSessionId) {
+                                        currentSessionId = sessionData.session_id;
+                                        loadSessions();
+                                    }
+                                } catch (e) {
+                                    // Not JSON, treat as text
+                                }
+                            } else if (data.startsWith('{"error":')) {
+                                // Handle error
+                                try {
+                                    const errorData = JSON.parse(data);
+                                    throw new Error(errorData.error);
+                                } catch (e) {
+                                    // Not JSON error, ignore
+                                }
+                            } else {
+                                // Normal text chunk
+                                updateStreamingMessage(data);
+                            }
+                        }
+                    }
+                }
+
+                // Remove typing indicator
+                removeTypingIndicator();
+
+                // Complete the streaming message
+                completeStreamingMessage();
+
+                // If no session ID yet, load sessions to show new one
+                if (!currentSessionId) {
+                    // Wait a bit for the session to be created in database
+                    setTimeout(() => loadSessions(), 100);
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                removeTypingIndicator();
+
+                // Clear streaming state if error
+                currentStreamingMessage = null;
+                streamingContent = '';
+
+                // Show error message
+                addMessageToUI('assistant', `Error: ${error.message}`);
+            } finally {
+                isProcessing = false;
+            }
+        });
+
+        // Function to load sessions
+        async function loadSessions() {
+            try {
+                const response = await fetch('/api/sessions/');
+                if (!response.ok) throw new Error('Failed to load sessions');
+
+                const sessions = await response.json();
+                displaySessions(sessions);
+
+                // If there's no current session and we have sessions, select the first one
+                if (!currentSessionId && sessions.length > 0) {
+                    loadSession(sessions[0].id);
+                }
+            } catch (error) {
+                console.error('Error loading sessions:', error);
+                sessionsList.innerHTML = `
+                    <div class="text-center text-danger py-3">
+                        <i class="fas fa-exclamation-triangle"></i> Failed to load sessions
+                    </div>
+                `;
+            }
+        }
+
+        // Function to display sessions
+        function displaySessions(sessions) {
+            if (sessions.length === 0) {
+                sessionsList.innerHTML = `
+                    <div class="text-center text-muted py-3">
+                        No chats yet. Start a new conversation!
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            sessions.forEach(session => {
+                const date = new Date(session.created_at);
+                const formattedDate = date.toLocaleDateString();
+                const isActive = session.id === currentSessionId ? 'active' : '';
+
+                html += `
+                    <div class="session-item ${isActive}" onclick="loadSession('${session.id}')">
+                        <div class="session-title">${session.title || 'Untitled Chat'}</div>
+                        <div class="session-date">${formattedDate}</div>
+                    </div>
+                `;
+            });
+
+            sessionsList.innerHTML = html;
+        }
+
+        // Function to create new session
+        async function createNewSession() {
+            try {
+                const response = await fetch('/api/sessions/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({})
+                });
+
+                if (!response.ok) throw new Error('Failed to create session');
+
+                const session = await response.json();
+                currentSessionId = session.id;
+
+                // Clear chat messages
+                chatMessages.innerHTML = `
+                    <div class="text-center text-muted py-5">
+                        <i class="fas fa-comment-alt fa-3x mb-3"></i>
+                        <p>Start a new conversation</p>
+                    </div>
+                `;
+
+                // Update UI
+                currentSessionTitle.textContent = 'New Chat';
+                currentSessionDate.textContent = 'Just now';
+
+                // Reload sessions list
+                loadSessions();
+
+                // Focus on input
+                messageInput.focus();
+
+            } catch (error) {
+                console.error('Error creating session:', error);
+                alert('Failed to create new session');
+            }
+        }
+
+        // Function to load a specific session
+        async function loadSession(sessionId) {
+            try {
+                const response = await fetch(`/api/chat/sessions/${sessionId}`);
+                if (!response.ok) throw new Error('Failed to load session');
+
+                const session = await response.json();
+                currentSessionId = session.id;
+
+                // Update session info
+                const date = new Date(session.created_at);
+                currentSessionTitle.textContent = session.title || 'Chat';
+                currentSessionDate.textContent = date.toLocaleString();
+
+                // Display messages
+                displayMessages(session.messages);
+
+                // Update active session in sidebar
+                loadSessions();
+
+                // Focus on input
+                messageInput.focus();
+
+            } catch (error) {
+                console.error('Error loading session:', error);
+                alert('Failed to load session');
+            }
+        }
+
+        // Function to display messages
+        function displayMessages(messages) {
+            if (messages.length === 0) {
+                chatMessages.innerHTML = `
+                    <div class="text-center text-muted py-5">
+                        <i class="fas fa-comment-alt fa-3x mb-3"></i>
+                        <p>No messages yet</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            messages.forEach(msg => {
+                const messageClass = msg.role === 'user' ? 'user-message' : 'assistant-message';
+                const headerText = msg.role === 'user' ? 'You' : 'Claude';
+
+                const buttonsHtml = msg.role === 'assistant' ? `
+                    <div class="message-actions">
+                        <button class="message-action-btn" onclick="copyMessage(this)" title="Copy message">
+                            <i class="fas fa-copy"></i>
+                            <span>Copy</span>
+                        </button>
+                        <button class="message-action-btn" onclick="regenerateMessage(this)" title="Regenerate response">
+                            <i class="fas fa-redo"></i>
+                            <span>Regenerate</span>
+                        </button>
+                        <button class="message-action-btn" onclick="likeMessage(this)" title="Like this response">
+                            <i class="fas fa-thumbs-up"></i>
+                            <span>Like</span>
+                        </button>
+                        <button class="message-action-btn" onclick="dislikeMessage(this)" title="Dislike this response">
+                            <i class="fas fa-thumbs-down"></i>
+                            <span>Dislike</span>
+                        </button>
+                        <button class="message-action-btn" onclick="shareMessage(this)" title="Share this message">
+                            <i class="fas fa-share"></i>
+                            <span>Share</span>
+                        </button>
+                    </div>
+                ` : '';
+
+                html += `
+                    <div class="message ${messageClass}">
+                        <div class="message-header">${headerText}</div>
+                        <div class="message-content">${msg.role === 'assistant' ? renderMarkdown(msg.content) : escapeHtml(msg.content)}</div>
+                        ${buttonsHtml}
+                    </div>
+                `;
+            });
+
+            chatMessages.innerHTML = html;
+            window.scrollTo(0, document.body.scrollHeight);
+
+            // Highlight code blocks after messages are displayed
+            setTimeout(() => {
+                hljs.highlightAll();
+            }, 0);
+        }
+
+        // Function to start a streaming message
+        function startStreamingMessage() {
+            // Remove placeholder if present
+            if (chatMessages.children.length === 1 &&
+                chatMessages.children[0].classList.contains('text-center')) {
+                chatMessages.innerHTML = '';
+            }
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message assistant-message';
+            messageDiv.innerHTML = `
+                <div class="message-header">Claude</div>
+                <div class="message-content streaming-content"></div>
+            `;
+
+            chatMessages.appendChild(messageDiv);
+            window.scrollTo(0, document.body.scrollHeight);
+
+            currentStreamingMessage = messageDiv;
+            streamingContent = '';
+
+            return messageDiv;
+        }
+
+        // Function to update streaming message content
+        function updateStreamingMessage(content) {
+            if (!currentStreamingMessage) return;
+
+            streamingContent += content;
+            const contentDiv = currentStreamingMessage.querySelector('.message-content');
+            contentDiv.textContent = streamingContent;
+            window.scrollTo(0, document.body.scrollHeight);
+        }
+
+        // Function to complete streaming message
+        function completeStreamingMessage() {
+            if (!currentStreamingMessage) return;
+
+            const contentDiv = currentStreamingMessage.querySelector('.message-content');
+            contentDiv.innerHTML = renderMarkdown(streamingContent);
+
+            // Add action buttons
+            const buttonsHtml = `
+                <div class="message-actions">
+                    <button class="message-action-btn" onclick="copyMessage(this)" title="Copy message">
+                        <i class="fas fa-copy"></i>
+                        <span>Copy</span>
+                    </button>
+                    <button class="message-action-btn" onclick="regenerateMessage(this)" title="Regenerate response">
+                        <i class="fas fa-redo"></i>
+                        <span>Regenerate</span>
+                    </button>
+                    <button class="message-action-btn" onclick="likeMessage(this)" title="Like this response">
+                        <i class="fas fa-thumbs-up"></i>
+                        <span>Like</span>
+                    </button>
+                    <button class="message-action-btn" onclick="dislikeMessage(this)" title="Dislike this response">
+                        <i class="fas fa-thumbs-down"></i>
+                        <span>Dislike</span>
+                    </button>
+                    <button class="message-action-btn" onclick="shareMessage(this)" title="Share this message">
+                        <i class="fas fa-share"></i>
+                        <span>Share</span>
+                    </button>
+                </div>
+            `;
+
+            currentStreamingMessage.innerHTML += buttonsHtml;
+
+            // Highlight code blocks
+            setTimeout(() => {
+                const codeBlocks = currentStreamingMessage.querySelectorAll('pre code');
+                codeBlocks.forEach(block => {
+                    hljs.highlightElement(block);
+                });
+            }, 0);
+
+            // Reset streaming state
+            currentStreamingMessage = null;
+            streamingContent = '';
+        }
+
+        // Function to add message to UI
+        function addMessageToUI(role, content) {
+            const messageClass = role === 'user' ? 'user-message' : 'assistant-message';
+            const headerText = role === 'user' ? 'You' : 'Claude';
+
+            // Remove placeholder if present
+            if (chatMessages.children.length === 1 &&
+                chatMessages.children[0].classList.contains('text-center')) {
+                chatMessages.innerHTML = '';
+            }
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${messageClass}`;
+            const buttonsHtml = role === 'assistant' ? `
+                <div class="message-actions">
+                    <button class="message-action-btn" onclick="copyMessage(this)" title="Copy message">
+                        <i class="fas fa-copy"></i>
+                        <span>Copy</span>
+                    </button>
+                    <button class="message-action-btn" onclick="regenerateMessage(this)" title="Regenerate response">
+                        <i class="fas fa-redo"></i>
+                        <span>Regenerate</span>
+                    </button>
+                    <button class="message-action-btn" onclick="likeMessage(this)" title="Like this response">
+                        <i class="fas fa-thumbs-up"></i>
+                        <span>Like</span>
+                    </button>
+                    <button class="message-action-btn" onclick="dislikeMessage(this)" title="Dislike this response">
+                        <i class="fas fa-thumbs-down"></i>
+                        <span>Dislike</span>
+                    </button>
+                    <button class="message-action-btn" onclick="shareMessage(this)" title="Share this message">
+                        <i class="fas fa-share"></i>
+                        <span>Share</span>
+                    </button>
+                </div>
+            ` : '';
+
+            messageDiv.innerHTML = `
+                <div class="message-header">${headerText}</div>
+                <div class="message-content">${role === 'assistant' ? renderMarkdown(content) : escapeHtml(content)}</div>
+                ${buttonsHtml}
+            `;
+
+            chatMessages.appendChild(messageDiv);
+            window.scrollTo(0, document.body.scrollHeight);
+
+            // Highlight code blocks in the new message
+            if (role === 'assistant') {
+                setTimeout(() => {
+                    const codeBlocks = messageDiv.querySelectorAll('pre code');
+                    codeBlocks.forEach(block => {
+                        hljs.highlightElement(block);
+                    });
+                }, 0);
+            }
+        }
+
+        // Function to show typing indicator
+        function showTypingIndicator() {
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'message assistant-message';
+            typingDiv.id = 'typingIndicator';
+            typingDiv.innerHTML = `
+                <div class="message-header">Claude</div>
+                <div class="typing-indicator">
+                    <i class="fas fa-ellipsis-h"></i> Thinking...
+                </div>
+            `;
+
+            chatMessages.appendChild(typingDiv);
+            window.scrollTo(0, document.body.scrollHeight);
+        }
+
+        // Function to remove typing indicator
+        function removeTypingIndicator() {
+            const typingIndicator = document.getElementById('typingIndicator');
+            if (typingIndicator) {
+                typingIndicator.remove();
+            }
+        }
+
+        // Helper function to render markdown to HTML
+        function renderMarkdown(text) {
+            // Security: Sanitize input and render markdown
+            const safeText = text.replace(/[<>&]/g, function(c) {
+                return {'<': '&lt;', '>': '&gt;', '&': '&amp;'}[c];
+            });
+
+            try {
+                const html = marked.parse(safeText);
+                // Additional security: remove script tags and other dangerous elements
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = html;
+
+                // Remove potentially dangerous elements
+                const dangerousTags = ['script', 'iframe', 'object', 'embed', 'form', 'input', 'button', 'select', 'textarea'];
+                dangerousTags.forEach(tag => {
+                    const elements = tempDiv.getElementsByTagName(tag);
+                    while (elements[0]) {
+                        elements[0].parentNode.removeChild(elements[0]);
+                    }
+                });
+
+                // Remove dangerous attributes
+                const allElements = tempDiv.getElementsByTagName('*');
+                for (let el of allElements) {
+                    el.removeAttribute('onclick');
+                    el.removeAttribute('onload');
+                    el.removeAttribute('onerror');
+                    el.removeAttribute('onmouseover');
+                    // Remove javascript: links for security
+                    if (el.hasAttribute('href') && el.getAttribute('href').startsWith('javascript:')) {
+                        el.removeAttribute('href');
+                    }
+                }
+
+                return tempDiv.innerHTML;
+            } catch (error) {
+                console.error('Markdown rendering error:', error);
+                // Fallback to plain text if markdown parsing fails
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+        }
+
+        // Helper function to escape HTML (for user messages)
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Message action button functions
+        function copyMessage(button) {
+            const messageContent = button.closest('.message').querySelector('.message-content');
+            let textToCopy = '';
+
+            // Extract text from message content
+            if (messageContent.querySelector('pre')) {
+                // For code blocks, get the raw text
+                textToCopy = messageContent.innerText || messageContent.textContent;
+            } else {
+                // For markdown content, get the rendered text
+                textToCopy = messageContent.innerText || messageContent.textContent;
+            }
+
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                const originalHTML = button.innerHTML;
+                button.innerHTML = '<i class="fas fa-check"></i><span>Copied</span>';
+                button.classList.add('active');
+
+                setTimeout(() => {
+                    button.innerHTML = originalHTML;
+                    button.classList.remove('active');
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+                alert('Failed to copy text to clipboard');
+            });
+        }
+
+        function regenerateMessage(button) {
+            if (confirm('Regenerate this response? This will replace the current response.')) {
+                const messageDiv = button.closest('.message');
+                const messageIndex = Array.from(messageDiv.parentNode.children).indexOf(messageDiv);
+
+                // Find the previous user message to regenerate from
+                const allMessages = Array.from(messageDiv.parentNode.children);
+                let userMessageContent = '';
+
+                // Look backwards for the last user message
+                for (let i = messageIndex - 1; i >= 0; i--) {
+                    if (allMessages[i].classList.contains('user-message')) {
+                        const contentDiv = allMessages[i].querySelector('.message-content');
+                        userMessageContent = contentDiv.innerText || contentDiv.textContent;
+                        break;
+                    }
+                }
+
+                if (userMessageContent) {
+                    // Remove current assistant message and regenerate
+                    messageDiv.remove();
+
+                    // Trigger new message with the same content
+                    if (!isProcessing) {
+                        messageInput.value = userMessageContent;
+                        chatForm.dispatchEvent(new Event('submit'));
+                    }
+                } else {
+                    alert('Could not find the original user message to regenerate from.');
+                }
+            }
+        }
+
+        function likeMessage(button) {
+            button.classList.toggle('active');
+            if (button.classList.contains('active')) {
+                const originalHTML = button.innerHTML;
+                button.innerHTML = '<i class="fas fa-thumbs-up"></i><span>Liked</span>';
+
+                // Reset dislike button if active
+                const dislikeBtn = button.closest('.message-actions').querySelector('button[onclick*="dislikeMessage"]');
+                if (dislikeBtn.classList.contains('active')) {
+                    dislikeBtn.classList.remove('active');
+                    dislikeBtn.innerHTML = '<i class="fas fa-thumbs-down"></i><span>Dislike</span>';
+                }
+
+                setTimeout(() => {
+                    button.innerHTML = originalHTML;
+                }, 2000);
+            } else {
+                button.innerHTML = '<i class="fas fa-thumbs-up"></i><span>Like</span>';
+            }
+        }
+
+        function dislikeMessage(button) {
+            button.classList.toggle('active');
+            if (button.classList.contains('active')) {
+                const originalHTML = button.innerHTML;
+                button.innerHTML = '<i class="fas fa-thumbs-down"></i><span>Disliked</span>';
+
+                // Reset like button if active
+                const likeBtn = button.closest('.message-actions').querySelector('button[onclick*="likeMessage"]');
+                if (likeBtn.classList.contains('active')) {
+                    likeBtn.classList.remove('active');
+                    likeBtn.innerHTML = '<i class="fas fa-thumbs-up"></i><span>Like</span>';
+                }
+
+                setTimeout(() => {
+                    button.innerHTML = originalHTML;
+                }, 2000);
+            } else {
+                button.innerHTML = '<i class="fas fa-thumbs-down"></i><span>Dislike</span>';
+            }
+        }
+
+        function shareMessage(button) {
+            const messageContent = button.closest('.message').querySelector('.message-content');
+            const textToShare = messageContent.innerText || messageContent.textContent;
+            const shareUrl = window.location.href.split('#')[0];
+
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Claude Agent Message',
+                    text: textToShare.substring(0, 100) + '...',
+                    url: shareUrl
+                }).catch(err => console.log('Error sharing:', err));
+            } else if (navigator.clipboard) {
+                navigator.clipboard.writeText(textToShare).then(() => {
+                    const originalHTML = button.innerHTML;
+                    button.innerHTML = '<i class="fas fa-check"></i><span>Copied</span>';
+                    button.classList.add('active');
+
+                    setTimeout(() => {
+                        button.innerHTML = originalHTML;
+                        button.classList.remove('active');
+                    }, 2000);
+                });
+            } else {
+                alert('Sharing not supported in this browser. Message content has been logged to console.');
+                console.log('Message to share:', textToShare);
+            }
+        }
+
+        // Make loadSession available globally
+        window.loadSession = loadSession;
+    </script>
+</body>
+</html>
