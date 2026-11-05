@@ -61,6 +61,8 @@ def make_collate_fn(tgt_vocab):
             src_batch, padding_value=0, batch_first=True)
         tgt_batch = nn.utils.rnn.pad_sequence(
             tgt_batch, padding_value=0, batch_first=True)
+        print(f'规整源语言token：{src_batch}')
+        print(f'规整目标语言token：{tgt_batch}')
         return src_batch, tgt_batch
 
     return collate_fn
@@ -81,7 +83,7 @@ def main():
 
     dataset = ToyTranslationDataset(raw_data, src_vocab, tgt_vocab)
     collate_fn = make_collate_fn(tgt_vocab)
-    print(f'规整token：{collate_fn}')
+
     loader = DataLoader(dataset, batch_size=2, shuffle=False, collate_fn=collate_fn)
 
     src_batch, tgt_batch = next(iter(loader))
